@@ -72,7 +72,8 @@ def process_manifest_json_file(**kwargs):
             # print(data)
             data = json.loads(data)
             # print(data['filepath'])
-            avro_files_list.extend([filepath for filepath in data['filepath']])
+            path = data['path'][1:]
+            avro_files_list.extend([ path + filepath for filepath in data['name']])
         except exceptions.NotFound as e:
             logger = logging.getLogger("airflow.task")
             logger.error("Exception Not found:" + str(e))
