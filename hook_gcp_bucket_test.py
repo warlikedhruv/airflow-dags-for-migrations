@@ -7,6 +7,7 @@ import json
 
 from airflow.contrib.hooks import gcs_hook
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+from airflow.exceptions import AirflowSkipException
 
 from google.api_core import exceptions
 import re
@@ -31,6 +32,8 @@ def get_manifest_json_file(**kwargs):
     files_list = connection.list('airflow-test-bucket-1107', prefix="manifest/"
                                  , delimiter=".json")
     manifest_json_files_list = [x for x in files_list if len(x.split("/")) == 2]
+    if len(manifest_json_files_list) <1:
+        raise AirflowSkipException
     return manifest_json_files_list
 
 
@@ -138,8 +141,8 @@ def archive_corrupted_json_files(**kwargs):
         )
 
 
-t1_1 = PythonOperator(
-    task_id='manifest_read_json_files',
+t1_get_manifest_json_file = PythonOperator(
+    task_id='get_manifest_json_file',
     python_callable=get_manifest_json_file,
     provide_context=True,
     dag=dag)
@@ -192,5 +195,5 @@ t4_2 = PythonOperator(
 # )
 
 
-t1_1 >> t1_2 >> t1_3 >> t2 >> t3
+t1_get_manifest_json_file >> t1_2 >> t1_3 >> t2 >> t3
 t3 >> [t4_1, t4_2]
