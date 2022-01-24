@@ -162,6 +162,11 @@ def load_bq(**kwargs):
     for data in valid_avro_files:
         for key in data.keys():
             print("Loading in ", schema_name[key], " || File Path:", data[key])
+            # cursor.run_load(
+            #     dest = schema_name[key],
+            #     source_uri = data[key],
+            #     rest..
+            # )
 
     return valid_avro_file
 
