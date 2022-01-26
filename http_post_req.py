@@ -55,7 +55,9 @@ def load_bq(**kwargs):
                          apn_impression_count =final_data['imps']
                          , load_ts=datetime.now())
     bq_operator = BigQueryHook(bigquery_conn_id=bQ_CONN_ID,use_legacy_sql=False )
-    service = bq_operator.get_service()
+    # bq_connection = bq_operator.get_conn() # new
+    # cursor = bq_connection.cursor() # new
+    #cursor.run_query() # new
     run_query_operator = BigQueryBaseCursor(service=service, project_id="")
     run_query_operator.run_query(
         sql="",
