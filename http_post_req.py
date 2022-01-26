@@ -50,7 +50,7 @@ def load_bq(**kwargs):
     sql_Statement = "INSERT INTO {schemaName} " \
                     "(database_name, table_name, transaction_dt, apn_impression_count, load_ts )" \
                     "select {database_name}, {table_name}, {transaction_dt}, {apn_impression_count}, {load_ts}"
-    sql_Statement.format(database_name="",table_name="",
+    sql = sql_Statement.format(schemaName="", database_name="",table_name="",
                          transaction_dt=final_data['day'],
                          apn_impression_count =final_data['imps']
                          , load_ts=datetime.now())
@@ -61,9 +61,8 @@ def load_bq(**kwargs):
         sql="",
         destination_dataset_table="",
         allow_large_results=True,
-        use_legacy_sql=False
-        write_disposition='WRITE_APPEND',
-
+        use_legacy_sql=False,
+        write_disposition='WRITE_APPEND'
     )
 
 
