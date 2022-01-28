@@ -93,13 +93,13 @@ def load_bq(**kwargs):
     table_name = "transaction_audit_log"
     load_ts = datetime.now()
 
-    values_fmt = "('{dataset_name}', '{table_name}', '{transaction_dt}', '{apn_impression_count}', '{load_ts}'),"
-    values_sql = ""
-    csv_table={}
-
+    csv_table = {}
     for row_no in range(len(columns)):
         csv_table[columns[row_no]] =[val.split(",")[row_no] for val in csv_data]
 
+
+    values_fmt = "('{dataset_name}', '{table_name}', '{transaction_dt}', '{apn_impression_count}', '{load_ts}'),"
+    values_sql = ""
     for row_no in range(len(csv_data)):
         values_sql += values_fmt.format(dataset_name=dataset_name, table_name=table_name,
                                         transaction_dt=csv_table['day'][row_no],
