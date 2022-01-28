@@ -78,20 +78,39 @@ from datetime import datetime
 """
 TEST -1
 """
-def load_bq():
+x_Comm_var=None
+def load_bq(**kwargs):
     """
     REPLACE LINE - 101 at your code
     and inside "run_query" write "sql=sql"
     :return:
     """
+    data = x_Comm_var.xcomm_pull()
+    csv_data = list(filter(bool, data.splitlines()))
+    columns = csv_data.pop(0).split(",")
+
+    dataset_name = "promospots_ads_stq"
+    table_name = "transaction_audit_log"
+    load_ts = datetime.now()
+
+    values_fmt = "('{dataset_name}', '{table_name}', '{transaction_dt}', '{apn_impression_count}', '{load_ts}'),"
+    values_sql = ""
+    csv_table={}
+
+    for row_no in range(len(columns)):
+        csv_table[columns[row_no]] =[val.split(",")[row_no] for val in csv_data]
+
+    for row_no in range(len(csv_data)):
+        values_sql += values_fmt.format(dataset_name=dataset_name, table_name=table_name,
+                                        transaction_dt=csv_table['day'][row_no],
+                                        apn_impression_count=csv_table['imps'][row_no],
+                                        load_ts=load_ts)
+    values_sql = values_sql[:-1]
+
+
     sql_Statement = "INSERT INTO `{schemaName}` " \
                     "(dataset_name, table_name, transaction_dt, apn_impression_count, load_ts) " \
-                    "VALUES ({dataset_name}, {table_name}, {transaction_dt}, {apn_impression_count}, {load_ts})"
-    sql = sql_Statement.format(schemaName="sab-dev-dab-common-4288.promospots_ads_stg.transaction_audit_log",
-                               dataset_name="promotspots_ads_stg",
-                               table_name="transaction_audit_log",
-                               transaction_dt='1',  # write static values here
-                               apn_impression_count='1'  # write static values here
-                               , load_ts='2022-01-26 19:03:48')
+                    "VALUES " + values_sql
+    sql = sql_Statement.format(schemaName="sab-dev-dab-common-4288.promospots_ads_stq.transaction_audit_log")
     print(sql)
 
