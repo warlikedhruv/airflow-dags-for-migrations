@@ -1,6 +1,6 @@
 # import json
 # import requests
-# from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+# from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook, BigQueryBaseCursor
 # from datetime import datetime
 # resp = {}
 #
@@ -114,3 +114,8 @@ def load_bq(**kwargs):
     sql = sql_Statement.format(schemaName="sab-dev-dab-common-4288.promospots_ads_stq.transaction_audit_log")
     print(sql)
 
+    # bq_operator = BigQueryBaseCursor(service="", project_id="",use_legacy_sql=False )
+    # service = bq_operator.
+    # bq = BigQueryHook(bigquery_conn_id=self.gcp_conn_id, delegate_to=None, use_legacy_sql=True, location='US')
+    # pd = BigQueryPandasConnector(bq._get_field('project'), bq.get_service())
+    # df = pd.read_gbq(self.query)
