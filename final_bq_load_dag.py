@@ -149,7 +149,7 @@ def process_manifest_json_file(**kwargs):
 
 
 """
-Step-4
+Step-4.1 and step 4.2
 """
 
 
@@ -170,27 +170,91 @@ def check_valid_avro_filepath(**kwargs):
     return {"valid_avro_files_path": valid_avro_files_path, "valid_files_archive": valid_avro_files_archive}
 
 
+def filter_files_schema(**kwargs):
+    xComm_var = kwargs['ti']
+    valid_avro_files_path = xComm_var.xcom_pull(task_ids="check_valid_avro_filepath")
+    standard_kv_feeds = []
+    auction_kv_feeds = []
+    for files in valid_avro_files_path:
+        if "auction_kv_labels" in files.keys():
+            auction_kv_feeds.append(files['auction_kv_labels'])
+        elif "standard_feed" in files.keys():
+            standard_kv_feeds.append(files['standard_feed'])
+    return {"auction_kv_labels": auction_kv_feeds, "standard_feed": standard_kv_feeds}
+
+
 """
-Step-5
+Step-5.1 and step-5.2
 """
 BQ_CONN_ID = ""
 
 
-def load_files_to_bigquery(**kwargs):
+def load_auction_feed_avro_file(**kwargs):
+    from google.cloud import bigquery
     xComm_var = kwargs['ti']
-    valid_avro_files_path = xComm_var.xcom_pull(task_ids="check_valid_avro_filepath")['valid_avro_files_path']
-    bucket_name = ""
-    bq_operator = BigQueryHook(bigquery_conn_id=BQ_CONN_ID, use_legacy_sql=False)
-    # bq_connection = bq_operator.get_conn()
-    # cursor = bq_connection.cursor()
-    # cursor.run_load()
-    logger.info("LOADED FILES:", valid_avro_files_path)
+    avro_files_path = xComm_var.xcom_pull(task_ids="filter_files_schema")['auction_kv_labels']
 
-    return valid_avro_files_path
+    client = bigquery.Client()
+
+    table_id = ""
+
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("datetime", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("auction_id_64", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("key", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("value", "STRING", mode="REQUIRED")
+        ],
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        source_format = bigquery.SourceFormat.AVRO,
+    )
+
+    uri = avro_files_path
+
+    load_job = client.load_table_from_file(uri, table_id, job_config=job_config)
+
+    load_job.result()
+
+    destination_table = client.get_table(table_id)
+    print("Loaded {} rows to table {}.{}".format(destination_table.num_rows, destination_table.dataset_id, destination_table.table_id))
+
+
+
+def load_standard_feed_avro_file(**kwargs):
+    from google.cloud import bigquery
+    xComm_var = kwargs['ti']
+    avro_files_path = xComm_var.xcom_pull(task_ids="filter_files_schema")['standard_feed']
+
+    client = bigquery.Client()
+
+    table_id = ""
+
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("auction_id_64", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("date_time", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("key", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("value", "STRING", mode="REQUIRED")
+        ],
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        source_format=bigquery.SourceFormat.AVRO,
+    )
+
+    uri = avro_files_path
+
+    load_job = client.load_table_from_file(uri, table_id, job_config=job_config)
+
+    load_job.result()
+
+    destination_table = client.get_table(table_id)
+    print("Loaded {} rows to table {}.{}".format(destination_table.num_rows, destination_table.dataset_id,
+                                                 destination_table.table_id))
+
 
 """
 Step-6
 """
+
 
 def archive_processed_avro_files(**kwargs):
     bucket_name = 'airflow-test-bucket-1107'
@@ -237,19 +301,42 @@ process_manifest_json_file_t3_2 = PythonOperator(
     provide_context=True,
     dag=dag)
 
-validate_avro_files_path = PythonOperator(
+validate_avro_files_path_t4_1 = PythonOperator(
     task_id='check_valid_avro_filepath',
     python_callable=check_valid_avro_filepath,
     provide_context=True,
     dag=dag
 )
 
-load_avro_files_to_bigquery = PythonOperator(
-    task_id='check_valid_avro_filepath',
-    python_callable=check_valid_avro_filepath,
+filter_avro_files_on_feeds_type_t4_2 = PythonOperator(
+    task_id='filter_files_schema',
+    python_callable=filter_files_schema,
     provide_context=True,
     dag=dag
 )
+
+
+
+load_auction_feed_to_bq_t5_1 = PythonOperator(
+    task_id='load_auction_feed_avro_file',
+    python_callable=load_auction_feed_avro_file,
+    provide_context=True,
+    dag=dag
+)
+
+load_standard_feed_to_bq_t5_2 = PythonOperator(
+    task_id='load_standard_feed_avro_file',
+    python_callable=load_standard_feed_avro_file,
+    provide_context=True,
+    dag=dag
+)
+
 
 read_bucket_files_t1 >> filter_manifest_files_t2 >> [archive_corrupted_json_files_t3_1, process_manifest_json_file_t3_2]
-process_manifest_json_file_t3_2 >> validate_avro_files_path
+
+process_manifest_json_file_t3_2 >> validate_avro_files_path_t4_1 >> filter_avro_files_on_feeds_type_t4_2
+
+filter_avro_files_on_feeds_type_t4_2 >> [ load_auction_feed_to_bq_t5_1, load_standard_feed_to_bq_t5_2]
+
+
+
