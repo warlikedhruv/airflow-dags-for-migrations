@@ -25,7 +25,7 @@ def scan_bucket():
     import re
     prefix = "manifest/"
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
-    yesterday_dt = today_dt - timedelta(2)
+    yesterday_dt = today_dt - timedelta(3)
     kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
     standard_feed_regex = prefix + "standard_feed_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
     kv_feed = []
@@ -143,8 +143,66 @@ STEP-4
 """
 
 
+def move_file(bucket_name, blob_name, destination_bucket_name, destination_blob_name):
+    """Moves a blob from one bucket to another with a new name."""
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+    # The ID of your GCS object
+    # blob_name = "your-object-name"
+    # The ID of the bucket to move the object to
+    # destination_bucket_name = "destination-bucket-name"
+    # The ID of your new GCS object (optional)
+    # destination_blob_name = "destination-object-name"
+
+    source_bucket = storage_client.bucket(bucket_name)
+    source_blob = source_bucket.blob(blob_name)
+    destination_bucket = storage_client.bucket(destination_bucket_name)
+
+    blob_copy = source_bucket.copy_blob(
+        source_blob, destination_bucket, destination_blob_name
+    )
+    source_bucket.delete_blob(blob_name)
+
+    print(
+        "Blob {} in bucket {} moved to blob {} in bucket {}.".format(
+            source_blob.name,
+            source_bucket.name,
+            blob_copy.name,
+            destination_bucket.name,
+        )
+    )
+
+
+def archive_duplicate_files(**kwargs):
+    # {"kv_feed": filtered_kv_feeds, "standard_feed": filtered_standard_feeds}
+    xComm_var = kwargs['ti']
+    feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
+    bucket_name = "airflow-test-bucket-1107"
+    blob_name = ['manifest/auction_kv_labels_feed-11303-2022020401-20220204012232.json',
+                 'DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020402-20220204012222.json']
+    destination_bucket_name = "airflow-test-bucket-1107"
+    destination_blob_name = ['DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020401-20220204012232.json',
+                             'DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020402-20220204012222.json']
+    move_file(bucket_name, blob_name, destination_bucket_name, destination_blob_name)
+
+
 def send_warning_email(**kwargs):
     send_email_smtp("test@email.com", "TEST", "BODY MESSAGE")
+
+
+"""
+STEP-5
+"""
+
+
+def blob_exists(projectname, credentials, bucket_name, filename):
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(filename)
+    return blob.exists()
+
+
+def check_valid_avro_files(*kwargs):
+    pass
 
 
 default_args = {
@@ -171,11 +229,17 @@ duplicate_hour_check_t2_1 = PythonOperator(
     python_callable=remove_duplicate_hours,
     provide_context=True,
     dag=dag)
-#
+
 load_manifest_table_t3_1 = PythonOperator(
     task_id='load_manifest_table',
     python_callable=load_manifest_table,
     provide_context=True,
     dag=dag)
 
-scan_bucket_t1_1 >> duplicate_hour_check_t2_1 >> load_manifest_table_t3_1
+archive_duplicate_files_t4_1 = PythonOperator(
+    task_id='archive_duplicate_files',
+    python_callable=archive_duplicate_files,
+    provide_context=True,
+    dag=dag)
+
+scan_bucket_t1_1 >> duplicate_hour_check_t2_1 >> load_manifest_table_t3_1 >> archive_duplicate_files_t4_1
