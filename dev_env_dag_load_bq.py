@@ -13,9 +13,7 @@ ENV VARIABLES
 BUCKET_NAME = "airflow-test-bucket-1107"
 storage_client = storage.Client()
 today_dt = datetime.now().date()
-"""
 
-"""
 """
 STEP:1
 """
@@ -25,12 +23,13 @@ def scan_bucket():
     import re
     prefix = "manifest/"
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
-    yesterday_dt = today_dt - timedelta(3)
+    yesterday_dt = today_dt - timedelta(2)
     kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
     standard_feed_regex = prefix + "standard_feed_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
     kv_feed = []
     standard_feed = []
     for blob in blobs:
+
         if re.match(kv_feed_regex, blob.name):
             kv_feed.append(blob.name)
         elif re.match(standard_feed_regex, blob.name):
@@ -67,6 +66,7 @@ def filter_duplicate_hours(feed_path):
             print("Exception:,", e)
 
     processed_files = []
+
     for key in filter_hours_dict.keys():
         processed_files.append("-".join(filter_hours_dict[key]))
     return {"processed_files": processed_files, "duplicate_file_list": duplicate_file_list}
@@ -143,7 +143,7 @@ STEP-4
 """
 
 
-def move_file(bucket_name, blob_name, destination_bucket_name, destination_blob_name):
+def move_file(bucket_name, destination_bucket_name, files):
     """Moves a blob from one bucket to another with a new name."""
     # The ID of your GCS bucket
     # bucket_name = "your-bucket-name"
@@ -155,22 +155,23 @@ def move_file(bucket_name, blob_name, destination_bucket_name, destination_blob_
     # destination_blob_name = "destination-object-name"
 
     source_bucket = storage_client.bucket(bucket_name)
-    source_blob = source_bucket.blob(blob_name)
     destination_bucket = storage_client.bucket(destination_bucket_name)
+    for file in files:
+        source_blob = source_bucket.blob(file)
 
-    blob_copy = source_bucket.copy_blob(
-        source_blob, destination_bucket, destination_blob_name
-    )
-    source_bucket.delete_blob(blob_name)
-
-    print(
-        "Blob {} in bucket {} moved to blob {} in bucket {}.".format(
-            source_blob.name,
-            source_bucket.name,
-            blob_copy.name,
-            destination_bucket.name,
+        blob_copy = source_bucket.copy_blob(
+            source_blob, destination_bucket, "DoNotProcess/" + file
         )
-    )
+        # source_bucket.delete_blob(blob_name)
+
+        print(
+            "Blob {} in bucket {} moved to blob {} in bucket {}.".format(
+                source_blob.name,
+                source_bucket.name,
+                blob_copy.name,
+                destination_bucket.name,
+            )
+        )
 
 
 def archive_duplicate_files(**kwargs):
@@ -178,12 +179,12 @@ def archive_duplicate_files(**kwargs):
     xComm_var = kwargs['ti']
     feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
     bucket_name = "airflow-test-bucket-1107"
-    blob_name = ['manifest/auction_kv_labels_feed-11303-2022020401-20220204012232.json',
-                 'DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020402-20220204012222.json']
     destination_bucket_name = "airflow-test-bucket-1107"
-    destination_blob_name = ['DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020401-20220204012232.json',
-                             'DoNotProcess/manifest/auction_kv_labels_feed-11303-2022020402-20220204012222.json']
-    move_file(bucket_name, blob_name, destination_bucket_name, destination_blob_name)
+    duplicate_files_kv_feed = feed_files['kv_feed']['duplicate_file_list']
+    duplicate_files_standard_feed = feed_files['standard_feed']['duplicate_file_list']
+    move_file(bucket_name, destination_bucket_name, duplicate_files_kv_feed)
+    move_file(bucket_name, destination_bucket_name, duplicate_files_standard_feed)
+    return True
 
 
 def send_warning_email(**kwargs):
@@ -193,6 +194,85 @@ def send_warning_email(**kwargs):
 """
 STEP-5
 """
+
+
+def download_avro_files_path(bucket_name, blob_name):
+    """Downloads a blob into memory."""
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+
+    # The ID of your GCS object
+    # blob_name = "storage-object-name"
+    import json
+
+    bucket = storage_client.bucket(bucket_name)
+
+    blob = bucket.blob(blob_name)
+    json_file_contents = json.loads(blob.download_as_string())
+    path = json_file_contents['path'][1:]
+    avro_files = [path + "/" + filepath['name'] for filepath in json_file_contents['files']]
+    return avro_files
+
+
+def download_json_contents(**kwargs):
+    xComm_var = kwargs['ti']
+    feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
+    valid_kv_feeds_json = feed_files['kv_feed']['processed_files']
+    valid_standard_feeds_json = feed_files['standard_feed']['processed_files']
+
+    kv_feed_avro_file = []
+    standard_feed_avro_file = []
+    for file in valid_kv_feeds_json:
+        kv_feed_avro_file.extend(download_avro_files_path(bucket_name="", blob_name=file))
+
+    for file in valid_standard_feeds_json:
+        standard_feed_avro_file.extend(download_avro_files_path(bucket_name="", blob_name=file))
+
+    print(kv_feed_avro_file, standard_feed_avro_file)
+    xComm_var.xcom_push(key='kv_feed_avro_file', value=kv_feed_avro_file)
+    xComm_var.xcom_push(key="standard_feed_avro_file", value=standard_feed_avro_file)
+    return True
+
+"""
+STEP: 6
+"""
+
+def load_standard_feed_avro_file(avro_files_path):
+    from google.cloud import bigquery
+
+    client = bigquery.Client()
+
+    table_id = ""
+
+    job_config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("auction_id_64", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("date_time", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("key", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("value", "STRING", mode="REQUIRED")
+        ],
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        source_format=bigquery.SourceFormat.AVRO,
+    )
+
+    uri = avro_files_path
+
+    load_job = client.load_table_from_file(uri, table_id, job_config=job_config)
+
+    load_job.result()
+
+    destination_table = client.get_table(table_id)
+    print("Loaded {} rows to table {}.{}".format(destination_table.num_rows, destination_table.dataset_id,
+                                                 destination_table.table_id))
+
+
+def load_avro_files_to_bq(**kwargs):
+    xComm_var = kwargs['ti']
+    feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
+
+
+def check_older_files(**kwargs):
+    pass
 
 
 def blob_exists(projectname, credentials, bucket_name, filename):
@@ -242,4 +322,5 @@ archive_duplicate_files_t4_1 = PythonOperator(
     provide_context=True,
     dag=dag)
 
-scan_bucket_t1_1 >> duplicate_hour_check_t2_1 >> load_manifest_table_t3_1 >> archive_duplicate_files_t4_1
+scan_bucket_t1_1 >> duplicate_hour_check_t2_1
+duplicate_hour_check_t2_1 >> [load_manifest_table_t3_1, archive_duplicate_files_t4_1]
