@@ -254,8 +254,8 @@ def load_kv_feed_avro_file(avro_files_path):
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         source_format=bigquery.SourceFormat.AVRO,
     )
-
-    uri = avro_files_path
+    gs_path = [f"gs://{BUCKET_NAME}/" + path for path in avro_files_path]
+    uri = gs_path
 
     load_job = client.load_table_from_file(uri, table_id, job_config=job_config)
 
