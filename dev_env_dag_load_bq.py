@@ -237,7 +237,7 @@ def download_json_contents(**kwargs):
 STEP: 6
 """
 
-def load_standard_feed_avro_file(avro_files_path):
+def load_kv_feed_avro_file(avro_files_path):
     from google.cloud import bigquery
 
     client = bigquery.Client()
@@ -268,11 +268,11 @@ def load_standard_feed_avro_file(avro_files_path):
 
 def load_avro_files_to_bq(**kwargs):
     xComm_var = kwargs['ti']
-    standard_feeds_avro_files = xComm_var.xcom_pull(key='standard_feed_avro_file', task_ids=['download_json_contents'])
-    load_standard_feed_avro_file(standard_feeds_avro_files)
+    # standard_feeds_avro_files = xComm_var.xcom_pull(key='standard_feed_avro_file', task_ids=['download_json_contents'])
+    # load_standard_feed_avro_file(standard_feeds_avro_files)
 
     kv_feeds_avro_files = xComm_var.xcom_pull(key='kv_feed_avro_file', task_ids=['download_json_contents'])
-    #load_standard_feed_avro_file(standard_feeds_avro_files)
+    load_kv_feed_avro_file(kv_feeds_avro_files)
 
 """
 TODOs:Below
