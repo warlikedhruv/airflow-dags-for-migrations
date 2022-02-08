@@ -279,6 +279,32 @@ def load_avro_files_to_bq(**kwargs):
     load_kv_feed_avro_file([common_path + path for path in kv_feeds_avro_files])
 
 
+
+"""
+CHECK VALID AVRO FILES:
+"""
+
+
+def is_path_exists(bucket_name, files_list):
+    from airflow import AirflowException
+    for path in files_list:
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(path)
+        if not blob.exists():
+            raise AirflowException("FILE NOT FOUND:", path)
+
+    return True
+
+
+def check_valid_avro_files(**kwargs):
+    xComm_var = kwargs['ti']
+    kv_feeds_avro_files = xComm_var.xcom_pull(key='kv_feed_avro_file', task_ids='download_json_contents')
+    standard_feeds_avro_files = xComm_var.xcom_pull(key='standard_feed_avro_file', task_ids='download_json_contents')
+    files_list = kv_feeds_avro_files + standard_feeds_avro_files
+    is_path_exists(bucket_name=BUCKET_NAME, files_list=files_list)
+
+
+
 """
 TODOs:Below
 """
