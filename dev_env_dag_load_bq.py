@@ -254,7 +254,9 @@ def load_kv_feed_avro_file(avro_files_path):
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         source_format=bigquery.SourceFormat.AVRO,
     )
-    gs_path = [f"gs://{BUCKET_NAME}/" + path for path in avro_files_path]
+    common_path = f"gs://{BUCKET_NAME}"
+    gs_path = [common_path + path for path in avro_files_path]
+
     uri = gs_path
 
     load_job = client.load_table_from_file(uri, table_id, job_config=job_config)
@@ -270,13 +272,32 @@ def load_avro_files_to_bq(**kwargs):
     xComm_var = kwargs['ti']
     # standard_feeds_avro_files = xComm_var.xcom_pull(key='standard_feed_avro_file', task_ids=['download_json_contents'])
     # load_standard_feed_avro_file(standard_feeds_avro_files)
-
+    common_path = f"gs://{BUCKET_NAME}"
+    gs_path = []
     kv_feeds_avro_files = xComm_var.xcom_pull(key='kv_feed_avro_file', task_ids=['download_json_contents'])
-    load_kv_feed_avro_file(kv_feeds_avro_files)
+
+    load_kv_feed_avro_file([common_path + path for path in kv_feeds_avro_files])
+
 
 """
 TODOs:Below
 """
+
+def test_1_push(**kwargs):
+    xComm_var = kwargs['ti']
+    list_1 = []
+    for i in range(0, 100):
+        list_1.append(str(i))
+    xComm_var.xcom_push(key='test_1', value=list_1)
+
+
+def test_2_pull(**kwargs):
+    xComm_var = kwargs['ti']
+    kv_feeds_avro_files = xComm_var.xcom_pull(key='test_1', task_ids=['test_1_push'])
+    print(kv_feeds_avro_files)
+    for i in kv_feeds_avro_files:
+        print(str(i)+'1')
+
 
 def check_older_files(**kwargs):
     pass
@@ -305,29 +326,43 @@ default_args = {
 
 dag = DAG("hook_gcp_bucket_final_dev", default_args=default_args, schedule_interval=None)
 
-scan_bucket_t1_1 = PythonOperator(
-    task_id='scan_bucket',
-    python_callable=scan_bucket,
-    provide_context=True,
-    dag=dag)
-
-duplicate_hour_check_t2_1 = PythonOperator(
-    task_id='remove_duplicate_hours',
-    python_callable=remove_duplicate_hours,
-    provide_context=True,
-    dag=dag)
-
-load_manifest_table_t3_1 = PythonOperator(
-    task_id='load_manifest_table',
-    python_callable=load_manifest_table,
-    provide_context=True,
-    dag=dag)
+# scan_bucket_t1_1 = PythonOperator(
+#     task_id='scan_bucket',
+#     python_callable=scan_bucket,
+#     provide_context=True,
+#     dag=dag)
+#
+# duplicate_hour_check_t2_1 = PythonOperator(
+#     task_id='remove_duplicate_hours',
+#     python_callable=remove_duplicate_hours,
+#     provide_context=True,
+#     dag=dag)
+#
+# load_manifest_table_t3_1 = PythonOperator(
+#     task_id='load_manifest_table',
+#     python_callable=load_manifest_table,
+#     provide_context=True,
+#     dag=dag)
+#
+# archive_duplicate_files_t4_1 = PythonOperator(
+#     task_id='archive_duplicate_files',
+#     python_callable=archive_duplicate_files,
+#     provide_context=True,
+#     dag=dag)
+#
+# scan_bucket_t1_1 >> duplicate_hour_check_t2_1
+# duplicate_hour_check_t2_1 >> [load_manifest_table_t3_1, archive_duplicate_files_t4_1]
 
 archive_duplicate_files_t4_1 = PythonOperator(
-    task_id='archive_duplicate_files',
-    python_callable=archive_duplicate_files,
+    task_id='test_1_push',
+    python_callable=test_1_push,
     provide_context=True,
     dag=dag)
 
-scan_bucket_t1_1 >> duplicate_hour_check_t2_1
-duplicate_hour_check_t2_1 >> [load_manifest_table_t3_1, archive_duplicate_files_t4_1]
+archive_duplicate_files_t5_1 = PythonOperator(
+    task_id='test_2_pull',
+    python_callable=test_2_pull,
+    provide_context=True,
+    dag=dag)
+
+archive_duplicate_files_t4_1 >> archive_duplicate_files_t5_1
