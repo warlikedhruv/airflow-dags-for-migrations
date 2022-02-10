@@ -143,7 +143,7 @@ STEP-4
 """
 
 
-def move_file(bucket_name, destination_bucket_name, files):
+def move_file(bucket_name: str, destination_bucket_name: str, source_files: list, destination_files: list):
     """Moves a blob from one bucket to another with a new name."""
     # The ID of your GCS bucket
     # bucket_name = "your-bucket-name"
@@ -156,13 +156,13 @@ def move_file(bucket_name, destination_bucket_name, files):
 
     source_bucket = storage_client.bucket(bucket_name)
     destination_bucket = storage_client.bucket(destination_bucket_name)
-    for file in files:
-        source_blob = source_bucket.blob(file)
+    for source_path, destination_path in zip(source_files, destination_files):
+        source_blob = source_bucket.blob(source_path)
 
         blob_copy = source_bucket.copy_blob(
-            source_blob, destination_bucket, "DoNotProcess/" + file
+            source_blob, destination_bucket, destination_path
         )
-        # source_bucket.delete_blob(blob_name)
+        # source_bucket.delete_blob(source_path)
 
         print(
             "Blob {} in bucket {} moved to blob {} in bucket {}.".format(
@@ -175,16 +175,74 @@ def move_file(bucket_name, destination_bucket_name, files):
 
 
 def archive_duplicate_files(**kwargs):
-    # {"kv_feed": filtered_kv_feeds, "standard_feed": filtered_standard_feeds}
     xComm_var = kwargs['ti']
     feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
+
+    destination_files_common_path = "manifest/duplicates/"
     bucket_name = "airflow-test-bucket-1107"
     destination_bucket_name = "airflow-test-bucket-1107"
+
     duplicate_files_kv_feed = feed_files['kv_feed']['duplicate_file_list']
     duplicate_files_standard_feed = feed_files['standard_feed']['duplicate_file_list']
-    move_file(bucket_name, destination_bucket_name, duplicate_files_kv_feed)
-    move_file(bucket_name, destination_bucket_name, duplicate_files_standard_feed)
+
+    destination_path_duplicate_kv_feeds = [destination_files_common_path + file.split("/")[-1] for file in
+                                           duplicate_files_kv_feed]
+
+    destination_path_duplicate_standard_feeds = [destination_files_common_path + file.split("/")[-1] for file in
+                                                 duplicate_files_standard_feed]
+
+    move_file(bucket_name, destination_bucket_name,
+              source_files=duplicate_files_kv_feed,
+              destination_files=destination_path_duplicate_kv_feeds)
+
+    move_file(bucket_name, destination_bucket_name,
+              duplicate_files_standard_feed,
+              destination_files=destination_path_duplicate_standard_feeds)
+
     return True
+
+
+
+# Archieving Valid Manifest files
+def archive_valid_files(**kwargs):
+
+    xComm_var = kwargs['ti']
+    feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
+
+    bucket_name = "airflow-test-bucket-1107"
+    destination_bucket_name = "airflow-test-bucket-1107"
+
+    valid_files_kv_feed = feed_files['kv_feed']['processed_files']
+    valid_files_standard_feed = feed_files['standard_feed']['processed_files']
+
+    move_file(bucket_name, destination_bucket_name,
+              source_files=valid_files_kv_feed,
+              destination_files=valid_files_kv_feed)
+
+    move_file(bucket_name, destination_bucket_name,
+              source_files=valid_files_standard_feed,
+              destination_files=valid_files_standard_feed)
+
+    return True
+
+
+# archive avro files after loading data
+def archive_valid_avro_files(**kwargs):
+    xComm_var = kwargs['ti']
+    kv_feeds_avro_files = xComm_var.xcom_pull(key='kv_feed_avro_file', task_ids='download_json_contents')
+    standard_feeds_avro_files = xComm_var.xcom_pull(key='standard_feed_avro_file', task_ids='download_json_contents')
+    all_avro_files_path = kv_feeds_avro_files + standard_feeds_avro_files
+
+    bucket_name = "airflow-test-bucket-1107"
+    destination_bucket_name = "airflow-test-bucket-1107"
+
+    move_file(bucket_name, destination_bucket_name,
+              source_files=all_avro_files_path,
+              destination_files=all_avro_files_path)
+
+
+
+
 
 
 def send_warning_email(**kwargs):
@@ -233,9 +291,11 @@ def download_json_contents(**kwargs):
     xComm_var.xcom_push(key="standard_feed_avro_file", value=standard_feed_avro_file)
     return True
 
+
 """
 STEP: 6
 """
+
 
 def load_kv_feed_avro_file(avro_files_path):
     from google.cloud import bigquery
@@ -279,7 +339,6 @@ def load_avro_files_to_bq(**kwargs):
     load_kv_feed_avro_file([common_path + path for path in kv_feeds_avro_files])
 
 
-
 """
 CHECK VALID AVRO FILES:
 """
@@ -304,10 +363,10 @@ def check_valid_avro_files(**kwargs):
     is_path_exists(bucket_name=BUCKET_NAME, files_list=files_list)
 
 
-
 """
 TODOs:Below
 """
+
 
 def test_1_push(**kwargs):
     xComm_var = kwargs['ti']
@@ -322,7 +381,7 @@ def test_2_pull(**kwargs):
     kv_feeds_avro_files = xComm_var.xcom_pull(key='test_1', task_ids=['test_1_push'])
     print(kv_feeds_avro_files)
     for i in kv_feeds_avro_files:
-        print(str(i)+'1')
+        print(str(i) + '1')
 
 
 def check_older_files(**kwargs):
