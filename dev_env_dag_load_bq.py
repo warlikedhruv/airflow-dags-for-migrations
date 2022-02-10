@@ -469,4 +469,5 @@ def check_history_files():
 
 
 def send_warning_email(body):
+    from airflow.utils.email import send_email_smtp
     send_email_smtp("test@email.com", "TEST-HISTORY-FILE-WARNING-EMAIL", body)
