@@ -202,10 +202,8 @@ def archive_duplicate_files(**kwargs):
     return True
 
 
-
 # Archieving Valid Manifest files
 def archive_valid_files(**kwargs):
-
     xComm_var = kwargs['ti']
     feed_files = xComm_var.xcom_pull(task_ids='remove_duplicate_hours')
 
@@ -239,10 +237,6 @@ def archive_valid_avro_files(**kwargs):
     move_file(bucket_name, destination_bucket_name,
               source_files=all_avro_files_path,
               destination_files=all_avro_files_path)
-
-
-
-
 
 
 def send_warning_email(**kwargs):
@@ -451,3 +445,28 @@ archive_duplicate_files_t5_1 = PythonOperator(
     dag=dag)
 
 archive_duplicate_files_t4_1 >> archive_duplicate_files_t5_1
+
+""" 
+PART - 2
+"""
+
+
+def check_history_files():
+    prefix = "manifest/"
+    blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
+    yesterdays_dt = datetime.now().date() - timedelta(1)
+    history_files_list = []
+    for blob in blobs:
+        file_split = blob.name.split("-")
+
+        file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
+        file_ts = datetime.strptime(file_split.split("-")[3], "%Y%m%d%H%M%S").date()
+        if file_dt < yesterdays_dt and (yesterdays_dt <= file_ts <= today_dt):
+            print("found history file:{}".format(blob.name))
+            history_files_list.append(blob.name)
+    if history_files_list:
+        send_warning_email(body = "||".join(history_files_list))
+
+
+def send_warning_email(body):
+    send_email_smtp("test@email.com", "TEST-HISTORY-FILE-WARNING-EMAIL", body)
