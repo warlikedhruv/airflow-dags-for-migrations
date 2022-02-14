@@ -239,8 +239,25 @@ def archive_valid_avro_files(**kwargs):
               destination_files=all_avro_files_path)
 
 
-def send_warning_email(**kwargs):
-    send_email_smtp("test@email.com", "TEST", "BODY MESSAGE")
+
+"""
+Send email
+
+"""
+#this will in your global variable
+email_recipient_list = "abc@email.com;test@email.com"
+
+
+def send_warning_email(recipient_email, subject, body):
+    from airflow.utils.email import send_email_smtp
+    send_email_smtp(to=recipient_email, subject=subject, html_content = body)
+
+def check_history_file(**kwargs):
+    ........
+    if history_files_list:
+        send_warning_email(recipent_email="", subject="Received history files", body=" || ".join(history_files_list) )
+
+
 
 
 """
