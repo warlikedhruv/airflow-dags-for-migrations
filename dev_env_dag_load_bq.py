@@ -253,9 +253,22 @@ def send_warning_email(recipient_email, subject, body):
     send_email_smtp(to=recipient_email, subject=subject, html_content = body)
 
 def check_history_file(**kwargs):
-    ........
     if history_files_list:
-        send_warning_email(recipent_email="", subject="Received history files", body=" || ".join(history_files_list) )
+        history_files_warning_email(environment="Dev", email_type="Warning", history_files_list, dag_name="test_1")
+
+def history_files_warning_email(environment, email_type, history_files_list, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD"):
+    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+    email_body = "<strong>Warning</strong>: Historical APN manifest files were received today containing data prior to yesterday</br></br>"
+    email_body +="<strong>Filenames:</strong></br></br>"
+    email_body +="<ul>"
+    for filename in history_files_list:
+        email_body += f"<li>{filename}</li>"
+    email_body += "</ul></br></br>"
+
+    email_body += "<strong>Please validate Historical file(s) and if needed, requeset operations to run " \
+                  "adhoc DAG for historical file(s). </strong>"
+
+    send_warning_email(recipent_email="", subject=email_subject, body=email_body)
 
 
 
