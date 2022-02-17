@@ -257,7 +257,8 @@ def check_history_file(**kwargs):
         history_files_warning_email(environment="Dev", email_type="Warning", history_files_list, dag_name="test_1")
 
 def history_files_warning_email(environment, email_type, history_files_list, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD"):
-    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+    email_subject = f"{environment} {email_type} for {product} {assets_tag} {dag_name}"
+    email_body = "<h2><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></h2>"
     email_body = "<strong>Warning</strong>: Historical APN manifest files were received today containing data prior to yesterday</br></br>"
     email_body +="<strong>Filenames:</strong></br></br>"
     email_body +="<ul>"
@@ -271,7 +272,37 @@ def history_files_warning_email(environment, email_type, history_files_list, dag
     send_warning_email(recipent_email="", subject=email_subject, body=email_body)
 
 
+def missing_avro_files_failure_email(environment, email_type, missing_avro_files, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD"):
+    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+    email_body = "<h2><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></h2>"
+    email_body = "<strong>Warning</strong>: The following avro file(s) for transaction load processing is/are missing</br></br>"
+    email_body +="<strong>Filenames:</strong></br></br>"
+    email_body +="<ul>"
+    for filename in missing_avro_files:
+        email_body += f"<li>{filename}</li>"
+    email_body += "</ul></br></br>"
 
+    email_body += "<strong>Action: </strong> Request AppNexus to send missing avro files"
+
+    send_warning_email(recipent_email="", subject=email_subject, body=email_body)
+
+
+
+def duplicate_hours_files_email(environment, email_type, duplicate_hour_files, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD"):
+    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+    email_body = "<h2><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></h2>"
+    email_body = "<strong>Warning</strong>: More than one manifest was received today for particular hour(s) shown in filenames below; " \
+                 "only the latest file for each hour was processed today </br></br>"
+    email_body += "<strong>Duplicate Filename(s), which were not processed:</strong></br></br>"
+    email_body += "<ul>"
+    for filename in duplicate_hour_files:
+        email_body += f"<li>{filename}</li>"
+    email_body += "</ul></br></br>"
+
+    email_body += f"<strong>Action: </strong> Find duplicate file(s) in lakehouse bucket folder path: " \
+                  f"sab-{environment}-dap-promospots-ads-transaction_archival/manifests/duplicates."
+
+    send_warning_email(recipent_email="", subject=email_subject, body=email_body)
 
 """
 STEP-5
@@ -498,6 +529,4 @@ def check_history_files():
         send_warning_email(body = "||".join(history_files_list))
 
 
-def send_warning_email(body):
-    from airflow.utils.email import send_email_smtp
-    send_email_smtp("test@email.com", "TEST-HISTORY-FILE-WARNING-EMAIL", body)
+
