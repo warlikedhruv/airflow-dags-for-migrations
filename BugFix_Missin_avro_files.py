@@ -34,6 +34,21 @@ import os
 
 
 
+def city_warning_email(environment, email_type, result_rows, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD"):
+    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+    email_body = "<h2><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></h2>"
+    email_body = "<strong>Warning</strong>: One or more unmapped page codes were added to promospots_ads.server table in today; <br/></br>"
+    email_body += "<strong>Corresponding page code(s):</strong></br></br>"
+    email_body += "<ul>"
+    for filename in result_rows:
+        email_body += f"<li>{filename}</li>"
+    email_body += "</ul></br></br>"
+
+    email_body += f"<strong>Action: </strong> REview with business team to check..... "
+
+    send_warning_email(recipent_email="", subject=email_subject, body=email_body)
+
+
 def run_query_function(**kwargs):
     from google.cloud import bigquery
     client = bigquery.Client() # or impersonate client
@@ -51,5 +66,10 @@ def run_query_function(**kwargs):
     )
 
     results = query_job.result()
+    result_rows = []
     for row in results:
-        print("{} : {} views".format(row.url, row.view_count))
+        result_rows.append("{} | {}".format(row.col1, row.col2))
+    if result_rows:
+        city_warning_email(environment="", email_type="", result_rows=result_rows, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD")
+
+
