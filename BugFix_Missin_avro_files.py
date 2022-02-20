@@ -39,10 +39,14 @@ def city_warning_email(environment, email_type, result_rows, dag_name="test_1", 
     email_body = "<h2><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></h2>"
     email_body = "<strong>Warning</strong>: One or more unmapped page codes were added to promospots_ads.server table in today; <br/></br>"
     email_body += "<strong>Corresponding page code(s):</strong></br></br>"
-    email_body += "<ul>"
-    for filename in result_rows:
-        email_body += f"<li>{filename}</li>"
-    email_body += "</ul></br></br>"
+    email_body += "<table>"
+    #NEW
+    for rows in result_rows:
+        email_body +="<tr>"
+        for cell in rows:
+            email_body += f"<td>{cell}</td>"
+        email_body += "</tr>"
+    email_body += "</table></br></br>"
 
     email_body += f"<strong>Action: </strong> REview with business team to check..... "
 
@@ -51,7 +55,7 @@ def city_warning_email(environment, email_type, result_rows, dag_name="test_1", 
 
 def run_query_function(**kwargs):
     from google.cloud import bigquery
-    client = bigquery.Client() # or impersonate client
+    client = bigquery.Client()
     query_job = client.query(
         """
         SELECT
@@ -68,8 +72,6 @@ def run_query_function(**kwargs):
     results = query_job.result()
     result_rows = []
     for row in results:
-        result_rows.append("{} | {}".format(row.col1, row.col2))
+        result_rows.append([row.col1, row.col2])
     if result_rows:
         city_warning_email(environment="", email_type="", result_rows=result_rows, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD")
-
-
