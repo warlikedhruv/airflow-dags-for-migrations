@@ -32,7 +32,7 @@ config_values = read_parameters_from_file(PARAMS_PATH + "/config.yml", ENVIRONME
 PIPELINE_PROJECT_ID = config_values['pipeline_project_id']
 EMAIL = config_values['email']
 SERVICE_ACC = config_values['service_account']
-if 'date' in config_values.keys():
+if config_values['date']:
     today_dt = datetime.strptime(str(config_values['date']), '%d%m%Y')
 else:
     today_dt = datetime.today().date()
