@@ -16,26 +16,26 @@ Import Ymal Files and environment
 from datetime import datetime
 import os
 
-ENVIRONMENT = os.getenv("env").upper()
-PARAMS_PATH = "/home/airflow/gcs/dags"
+# ENVIRONMENT = os.getenv("env").upper()
+# PARAMS_PATH = "/home/airflow/gcs/dags"
 
 
-def read_parameters_from_file(filename: str, env: str):
-    import yaml
-    with open(filename, 'r') as file:
-        params = yaml.full_load(file)
-        my_config_dict = params[env]
-        return my_config_dict
-
-
-config_values = read_parameters_from_file(PARAMS_PATH + "/config.yml", ENVIRONMENT)
-PIPELINE_PROJECT_ID = config_values['pipeline_project_id']
-EMAIL = config_values['email']
-SERVICE_ACC = config_values['service_account']
-if config_values['date']:
-    today_dt = datetime.strptime(str(config_values['date']), '%d%m%Y')
-else:
-    today_dt = datetime.today().date()
+# def read_parameters_from_file(filename: str, env: str):
+#     import yaml
+#     with open(filename, 'r') as file:
+#         params = yaml.full_load(file)
+#         my_config_dict = params[env]
+#         return my_config_dict
+#
+#
+# config_values = read_parameters_from_file(PARAMS_PATH + "/config.yml", ENVIRONMENT)
+# PIPELINE_PROJECT_ID = config_values['pipeline_project_id']
+# EMAIL = config_values['email']
+# SERVICE_ACC = config_values['service_account']
+# if config_values['date']:
+#     today_dt = datetime.strptime(str(config_values['date']), '%d%m%Y')
+# else:
+#     today_dt = datetime.today().date()
 
 
 
@@ -80,3 +80,46 @@ else:
 #         result_rows.append([row.col1, row.col2])
 #     if result_rows:
 #         city_warning_email(environment="", email_type="", result_rows=result_rows, dag_name="test_1", product="promospots-ads", assets_tag="ADS:TRANSACTION-LOAD")
+
+
+# str1 = None
+# if str1:
+#     print("True")
+# else:
+#     print("fasle")
+
+
+"""
+BUG FIX AVRO FILE CHECK
+"""
+
+def is_path_exists(bucket_name: str, files_list: list):
+    missing_avro_files = []
+    valid_avro_files = files_list.copy() # new
+    for path in files_list:
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(path)
+        if not blob.exists():
+            missing_avro_files.append(path)
+            valid_avro_files.remove(path) # new
+    return valid_avro_files, missing_avro_files
+
+def check_valid_avro_files(**kwargs):
+    xComm_var = kwargs['ti']
+    kv_feed_avro_files = xComm_var.xcomm_pull(key='kv_feed_avro_file', task_ids='prepare_avro_files')
+    standard_feed_avro_files = xComm_var.xcomm_pull(key='standard_feed_avro_file', task_ids='prepare_avro_files')
+
+    kv_feed_valid_avro_files, kv_feed_missing_avro_files  = is_path_exists(bucket_name=INGRESS_BUCKET_NAME, files_list=kv_feed_avro_files)
+    standard_feed_valid_avro_files, standard_feed_missing_avro_files = is_path_exists(bucket_name=INGRESS_BUCKET_NAME,files_list=standard_feed_avro_files)
+
+    total_missing_avro_files = kv_feed_missing_avro_files + standard_feed_missing_avro_files
+    if total_missing_avro_files: # replace from is_path_exists function
+        missing_avro_files_failure_email(.......)
+
+    xComm_var.xcom_push(key='kv_feed_avro_file', value=kv_feed_valid_avro_files)
+    xComm_var.xcom_push(key="standard_feed_avro_file", value=standard_feed_valid_avro_files)
+
+
+
+
+
