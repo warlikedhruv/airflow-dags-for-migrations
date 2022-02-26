@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 import os
@@ -24,6 +24,18 @@ dag = DAG('external_task_sensor_dag_2',
           catchup=False
           )
 
+
+def prev_execution_dt(execution_date, **kwargs):
+    weekday=execution_date.strftime('%A')
+    print(weekday)
+    if weekday == "Thursday":
+        execution_dt_derived=execution_date - timedelta(hours=72)
+        print(execution_dt_derived)
+    else:
+        execution_dt_derived=execution_date - timedelta(hours=24)
+        print(execution_dt_derived)
+    return execution_dt_derived
+
 external_task_sensor = ExternalTaskSensor(
     task_id='external_task_sensor',
     poke_interval=60,
@@ -33,7 +45,8 @@ external_task_sensor = ExternalTaskSensor(
     external_task_id='archive_duplicate_files',
     external_dag_id='hook_gcp_bucket_final_dev',
     allowed_states=['success'],
-    execution_delta=timedelta(minutes=-1),
+    #execution_delta=timedelta(hours=24),
+    execution_date_fn=lambda dt: datetime.date(timezone.utc) - timedelta(minutes=3),
     dag=dag)
 
 
@@ -44,7 +57,6 @@ def my_processing_func(**kwargs):
 some_task = PythonOperator(
     task_id='task_1',
     python_callable=my_processing_func,
-
     dag=dag)
 
 some_task
