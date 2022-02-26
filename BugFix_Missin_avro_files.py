@@ -120,6 +120,7 @@ def check_valid_avro_files(**kwargs):
     xComm_var.xcom_push(key="standard_feed_avro_file", value=standard_feed_valid_avro_files)
 
 
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 trigger = TriggerDagRunOperator(
     task_id="trigger_dag_2",
     trigger_dag_id="external_task_sensor_dag_2",
