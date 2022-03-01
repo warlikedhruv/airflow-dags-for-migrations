@@ -5,11 +5,11 @@ import os
 #from airflow.operators.sensors import ExternalTaskSensor for old
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-
+start_date = datetime(2022, 2, 25)
 default_args = {
     "owner": "dhruv",
     "depends_on_past": False,
-    "start_date": datetime(2022, 2, 25),
+    "start_date": start_date,
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -46,7 +46,7 @@ external_task_sensor = ExternalTaskSensor(
     external_dag_id='hook_gcp_bucket_final_dev',
     allowed_states=['success'],
     #execution_delta=timedelta(hours=24),
-    execution_date_fn=lambda dt: datetime.date(timezone.utc) - timedelta(minutes=3),
+    execution_date_fn=lambda dt: start_date,
     dag=dag)
 
 
