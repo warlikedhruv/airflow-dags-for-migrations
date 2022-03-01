@@ -138,7 +138,7 @@ def execute_query(query):
     results = query_job.result()
     result_rows = []
     for row in results:
-        result_rows.append([row.col1, row.col2])
+        result_rows.extend([row.col1, row.col2])
     return result_rows
 
 
@@ -146,7 +146,7 @@ def send_email(*kwargs):
     query_1 ="""Select Col1,col2 from table where transaction_dt=yesterday"""
     query_2 ="""Select Col1,col2 from table where transaction_dt=yesterday-1"""
     query_3 = """Select Col1,col2 from table where transaction_dt=yesterday-7"""
-    email_subject = f"{environment}\t {email_type}\t for {product}\t {assets_tag}\t {dag_name}"
+
 
     query_result_1 = execute_query(query_1)
     query_result_2 = execute_query(query_2)
@@ -158,24 +158,30 @@ def send_email(*kwargs):
     email_body += r"<strong>Transaction Job report for:</strong>{today_dt}<br/>".format(today_dt=today_dt)
     email_body += r"<strong>Number of Impressions in fully summarized data:</strong>{count}<br/>".format(count=query_result_1[0])
     email_body += r"<strong>Number of Impressions AppNexus Api report:</strong>{count}<br/>".format(count=query_result_1[1])
-    difference = (int(query_result_1[0]) - int(query_result_1[1]))
-    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference)
+    difference_1 = (int(query_result_1[0]) - int(query_result_1[1]))
+    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_1)
 
     # line 2
     email_body += r"<strong>Report for one day before:</strong><br/>"
     email_body += r"<strong>Transaction Job report for:</strong>{yesterday_dt}<br/>".format(yesterday_dt=today_dt - timedelta(day=1))
     email_body += r"<strong>Number of Impressions in fully summarized data:</strong>{count}<br/>".format(count=query_result_2[0])
     email_body += r"<strong>Number of Impressions AppNexus Api report:</strong>{count}<br/>".format(count=query_result_2[1])
-    difference = (int(query_result_2[0]) - int(query_result_2[1]))
-    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference)
+    difference_2 = (int(query_result_2[0]) - int(query_result_2[1]))
+    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_2)
 
     # line 3
     email_body += r"<strong>Report for one week before:</strong><br/>"
     email_body += r"<strong>Transaction Job report for:</strong>{yesterday_dt}<br/>".format(yesterday_dt=today_dt - timedelta(day=7))
     email_body += r"<strong>Number of Impressions in fully summarized data:</strong>{count}<br/>".format(count=query_result_3[0])
     email_body += r"<strong>Number of Impressions AppNexus Api report:</strong>{count}<br/>".format(count=query_result_3[1])
-    difference = (int(query_result_3[0]) - int(query_result_3[1]))
-    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference)
+    difference_3 = (int(query_result_3[0]) - int(query_result_3[1]))
+    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_3)''
+
+    if difference_1 == 0:
+        email_subject = r"success"
+    else:
+        email_subject = r"failure"
+
 
     #send report email
     send_warning_email(recipent_email="", subject=email_subject, body=email_body)
