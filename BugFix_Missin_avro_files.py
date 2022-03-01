@@ -175,7 +175,7 @@ def send_email(*kwargs):
     email_body += r"<strong>Number of Impressions in fully summarized data:</strong>{count}<br/>".format(count=query_result_3[0])
     email_body += r"<strong>Number of Impressions AppNexus Api report:</strong>{count}<br/>".format(count=query_result_3[1])
     difference_3 = (int(query_result_3[0]) - int(query_result_3[1]))
-    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_3)''
+    email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_3)
 
     if difference_1 == 0:
         email_subject = r"success"
