@@ -14,6 +14,7 @@ BUCKET_NAME = "airflow-test-bucket-1107"
 storage_client = storage.Client()
 today_dt = datetime.now().date()
 
+
 """
 STEP:1
 """

@@ -139,6 +139,9 @@ def execute_query(query):
     result_rows = []
     for row in results:
         result_rows.extend([row.col1, row.col2])
+    if not result_rows:
+        pass
+
     return result_rows
 
 
@@ -155,11 +158,13 @@ def send_email(*kwargs):
     email_body = r"<b><p style='color:#FF0000'>***This email has been generated automatically - DO NOT REPLY Directly ***</p></b>"
 
     # line 1
+
     email_body += r"<strong>Transaction Job report for:</strong>{today_dt}<br/>".format(today_dt=today_dt)
     email_body += r"<strong>Number of Impressions in fully summarized data:</strong>{count}<br/>".format(count=query_result_1[0])
     email_body += r"<strong>Number of Impressions AppNexus Api report:</strong>{count}<br/>".format(count=query_result_1[1])
     difference_1 = (int(query_result_1[0]) - int(query_result_1[1]))
     email_body += r"<strong>Difference of impression between API and file(should be 0):</strong>{difference}<br/>".format(difference=difference_1)
+
 
     # line 2
     email_body += r"<strong>Report for one day before:</strong><br/>"
@@ -185,3 +190,5 @@ def send_email(*kwargs):
 
     #send report email
     send_warning_email(recipent_email="", subject=email_subject, body=email_body)
+
+
