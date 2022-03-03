@@ -164,3 +164,5 @@ end = DummyOperator(
         task_id="end",
         trigger_rule="all_success",
     )
+
+start >> [archive_kv_feeds_t1_1, archive_standard_feeds_t1_2, archive_manifest_files_t1_3] >> end
