@@ -57,7 +57,8 @@ def check_history_files():
     yesterdays_dt = yesterday_dt  # today
     for blob in blobs:
         file_split = blob.name.split("-")
-        file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
+        if len(file_split) > 1:
+            file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
 
         if file_dt < yesterdays_dt:
             manifest_history_file_list.append(blob.name)
@@ -165,6 +166,7 @@ archive_manifest_files_t1_3 = PythonOperator(
 end = DummyOperator(
         task_id="end",
         trigger_rule="all_success",
+        dag = dag
     )
 
 start >> [archive_kv_feeds_t1_1, archive_standard_feeds_t1_2, archive_manifest_files_t1_3] >> end
