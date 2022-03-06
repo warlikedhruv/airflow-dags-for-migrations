@@ -12,7 +12,9 @@ start_date = datetime(2022, 2, 25)
 BUCKET_NAME = "airflow-test-bucket-1107"
 DESTINATION_BUCKET_NAME = "airflow-test-bucket-1107"
 storage_client = storage.Client()
-today_dt = datetime.now().date()
+
+yesterday_dt = datetime.strptime('20210101', '%Y%m%d')
+#today_dt = datetime.now().date()
 manifest_history_file_list = []
 
 """
@@ -52,7 +54,7 @@ def check_history_files():
     global manifest_history_file_list
     prefix = "manifest/"
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
-    yesterdays_dt = today_dt  # today
+    yesterdays_dt = yesterday_dt  # today
     for blob in blobs:
         file_split = blob.name.split("-")
         file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
@@ -75,7 +77,7 @@ def archive_avro_files(avro_dt_directory_path):
 
 
 def check_and_archive_history_avro_files(common_file_path: str):
-    today_dt_int = int(today_dt.strftime('%Y%m%d'))
+    today_dt_int = int(yesterday_dt.strftime('%Y%m%d'))
     global avro_files_list
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=common_file_path, delimiter="/",
                                       include_trailing_delimiter=True)
