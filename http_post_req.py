@@ -122,3 +122,8 @@ def load_bq(**kwargs):
     # df = pd.read_gbq(self.query)
 
 
+
+a = set()
+a.update([1])
+a.update([2])
+print(a[1])

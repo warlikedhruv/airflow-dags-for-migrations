@@ -16,6 +16,7 @@ ARCHIVAL_BUCKET = "airflow-test-bucket-1107"
 yesterday_dt = datetime.strptime('20210101', '%Y%m%d')
 # today_dt = datetime.now().date()
 manifest_history_file_dates = set()
+today_dt = datetime.now().date()
 
 """
 General Function
@@ -50,18 +51,20 @@ GENERAL FUNCTION FOR ARCHIVE MANIFEST
 """
 
 
-def check_history_manifest_files_for_run_date(run_date):
-    global manifest_history_file_date_list
+def check_history_manifest_files_for_run_date():
+    global manifest_history_file_dates
     prefix = "manifest/"
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
-    yesterdays_dt = yesterday_dt  # today
+    yesterdays_dt = today_dt - timedelta(1)
     for blob in blobs:
         file_split = blob.name.split("-")
         if len(file_split) > 1:
             file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
             file_ts = datetime.strptime(file_split.split("-")[3], "%Y%m%d%H%M%S").date()
-            if file_dt < yesterdays_dt and (yesterdays_dt <= file_ts <= run_date + timedelta(1)):
+            if file_dt < yesterdays_dt and (yesterdays_dt <= file_ts <= today_dt + timedelta(1)):
                 manifest_history_file_dates.add(file_dt)
+    manifest_history_file_dates = list(manifest_history_file_dates)
+
 
 
 def find_manifest_files_from_archive(**kwargs):
@@ -70,13 +73,11 @@ def find_manifest_files_from_archive(**kwargs):
     blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=prefix, delimiter="/")
     kv_feed = []
     standard_feed = []
-
     for date in manifest_history_file_dates:
         kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + date.strftime("%Y%m%d") + "\w+"
         standard_feed_regex = prefix + "standard_feed_feed-11303-" + date.strftime("%Y%m%d") + "\w+"
 
         for blob in blobs:
-
             if re.match(kv_feed_regex, blob.name):
                 kv_feed.append(blob.name)
             elif re.match(standard_feed_regex, blob.name):
@@ -110,12 +111,14 @@ def fetch_feed_file_from_archive(common_prefix: str):
 
         # move files back to ingress bucket
         move_file(ARCHIVAL_BUCKET, BUCKET_NAME, source_files=file_path, destination_files=file_path)
-        return True
+
+    return True
 
 
 def fetch_kv_feeds_from_archival(**kwargs):
     kv_feed_common_path = "feeds/kv_feed/{date}/"
     fetch_feed_file_from_archive(kv_feed_common_path)
+
 
 def fetch_standard_feeds_from_archival(**kwargs):
     kv_feed_common_path = "feeds/standard_feed/{date}/"
@@ -143,8 +146,6 @@ dag = DAG('adhoc_dag',
           catchup=False
           )
 
-
-
 start = DummyOperator(
     task_id="start",
     trigger_rule="all_success",
@@ -167,18 +168,13 @@ fetch_kv_feeds_from_archival_t2_1 = PythonOperator(
     python_callable=fetch_kv_feeds_from_archival,
     dag=dag)
 
-
 fetch_standard_feeds_from_archival_t3_1 = PythonOperator(
     task_id='fetch_standard_feeds_from_archival',
     python_callable=fetch_standard_feeds_from_archival,
     dag=dag)
-
-
 
 end = DummyOperator(
     task_id="end",
     trigger_rule="all_success",
     dag=dag
 )
-
-
