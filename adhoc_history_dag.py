@@ -15,7 +15,7 @@ storage_client = storage.Client()
 ARCHIVAL_BUCKET = "airflow-test-bucket-1107"
 yesterday_dt = datetime.strptime('20210101', '%Y%m%d')
 # today_dt = datetime.now().date()
-manifest_history_file_dates = set()
+# manifest_history_file_dates = set()
 today_dt = datetime.now().date()
 
 """
@@ -51,20 +51,19 @@ GENERAL FUNCTION FOR ARCHIVE MANIFEST
 """
 
 
-def check_history_manifest_files_for_run_date():
-    global manifest_history_file_dates
-    prefix = "manifest/"
-    blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
-    yesterdays_dt = today_dt - timedelta(1)
-    for blob in blobs:
-        file_split = blob.name.split("-")
-        if len(file_split) > 1:
-            file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
-            file_ts = datetime.strptime(file_split.split("-")[3], "%Y%m%d%H%M%S").date()
-            if file_dt < yesterdays_dt and (yesterdays_dt <= file_ts <= today_dt + timedelta(1)):
-                manifest_history_file_dates.add(file_dt)
-    manifest_history_file_dates = list(manifest_history_file_dates)
-
+# def check_history_manifest_files_for_run_date():
+#     global manifest_history_file_dates
+#     prefix = "manifest/"
+#     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix, delimiter="/")
+#     yesterdays_dt = today_dt - timedelta(1)
+#     for blob in blobs:
+#         file_split = blob.name.split("-")
+#         if len(file_split) > 1:
+#             file_dt = datetime.strptime(file_split.split("-")[2], "%Y%m%d%H").date()
+#             file_ts = datetime.strptime(file_split.split("-")[3], "%Y%m%d%H%M%S").date()
+#             if file_dt < yesterdays_dt and (yesterdays_dt <= file_ts <= today_dt + timedelta(1)):
+#                 manifest_history_file_dates.add(file_dt)
+#     manifest_history_file_dates = list(manifest_history_file_dates)
 
 
 def find_manifest_files_from_archive(**kwargs):
@@ -73,15 +72,15 @@ def find_manifest_files_from_archive(**kwargs):
     blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=prefix, delimiter="/")
     kv_feed = []
     standard_feed = []
-    for date in manifest_history_file_dates:
-        kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + date.strftime("%Y%m%d") + "\w+"
-        standard_feed_regex = prefix + "standard_feed_feed-11303-" + date.strftime("%Y%m%d") + "\w+"
 
-        for blob in blobs:
-            if re.match(kv_feed_regex, blob.name):
-                kv_feed.append(blob.name)
-            elif re.match(standard_feed_regex, blob.name):
-                standard_feed.append(blob.name)
+    kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
+    standard_feed_regex = prefix + "standard_feed_feed-11303-" + yesterday_dt.strftime("%Y%m%d") + "\w+"
+
+    for blob in blobs:
+        if re.match(kv_feed_regex, blob.name):
+            kv_feed.append(blob.name)
+        elif re.match(standard_feed_regex, blob.name):
+            standard_feed.append(blob.name)
 
     return {"kv_feed": kv_feed, "standard_feed": standard_feed}
 
@@ -103,25 +102,23 @@ def fetch_manifest_files_from_archive(**kwargs):
 
 # supporting function for both standard and kv feeds
 def fetch_feed_file_from_archive(common_prefix: str):
-    for date in manifest_history_file_dates:
-        # find directories with date eg : feeds/standard-feed/20220202/*
-        prefix = common_prefix.format(date.strftime("%Y%m%d"))
-        blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=prefix, delimiter="/")
-        file_path = [str(blob.name) for blob in blobs]
+    # find directories with date eg : feeds/standard-feed/20220202/*
+    blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=common_prefix, delimiter="/")
+    file_path = [str(blob.name) for blob in blobs]
 
-        # move files back to ingress bucket
-        move_file(ARCHIVAL_BUCKET, BUCKET_NAME, source_files=file_path, destination_files=file_path)
+    # move files back to ingress bucket
+    move_file(ARCHIVAL_BUCKET, BUCKET_NAME, source_files=file_path, destination_files=file_path)
 
     return True
 
 
 def fetch_kv_feeds_from_archival(**kwargs):
-    kv_feed_common_path = "feeds/kv_feed/{date}/"
+    kv_feed_common_path = "feeds/kv_feed/{date}/".format(date=yesterday_dt.strftime("%Y%m%d"))
     fetch_feed_file_from_archive(kv_feed_common_path)
 
 
 def fetch_standard_feeds_from_archival(**kwargs):
-    kv_feed_common_path = "feeds/standard_feed/{date}/"
+    kv_feed_common_path = "feeds/standard_feed/{date}/".format(date=yesterday_dt.strftime("%Y%m%d"))
     fetch_feed_file_from_archive(kv_feed_common_path)
 
 
