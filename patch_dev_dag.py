@@ -15,3 +15,8 @@ def transaction_report_email(**kwargs):
     """
     Rest will be the same 
     """
+    if my_config_values['trans_plus_one'] == 'None':
+        transaction_dt = kwargs['execution_date'].date() - timedelta(1)
+    else:
+        ...
+
