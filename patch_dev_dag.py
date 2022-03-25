@@ -23,11 +23,5 @@
 import json
 
 
-def api_post():
 
-
-    r = json.loads(r.text)
-    if 'report_id' in r['response'].keys():
-        same code...
-    else:
-        token, report_id = None, None
+        
