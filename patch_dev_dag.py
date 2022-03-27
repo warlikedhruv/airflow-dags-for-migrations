@@ -43,8 +43,9 @@ def test_1(**kwargs):
     return True
 
 
-def get_last_exec_date(dag_id='dev_dag_patch'):
+def get_last_exec_date(dag_id='dev_dag_patch', **kwargs):
     print(dag.get_last_dagrun(include_externally_triggered=True))
+    print("ACTUAL TIME", kwargs['key1'])
     return True
 
 
@@ -58,6 +59,8 @@ python_sleep_1 = PythonOperator(
 test_2 = PythonOperator(
     task_id='test_2',
     python_callable=get_last_exec_date,
+    op_kwargs={'key1': "{{ dag_run.start_date }}"},
+    provide_context=True,
     dag=dag
 )
 
