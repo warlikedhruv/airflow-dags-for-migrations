@@ -71,6 +71,9 @@ def load_manifest_stagging_table():
     else:
         print("Encountered errors while inserting rows: {}".format(errors))
 
+def detect_history_transaction():
+
+
 def load_control_table():
     from google.cloud import bigquery
     client = bigquery.Client()
