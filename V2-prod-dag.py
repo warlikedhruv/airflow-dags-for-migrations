@@ -131,7 +131,7 @@ def load_control_table():
     results = query_job.result()
     for result in results:
         if result.count >= 48:
-            rows_insert_for_control_table.append({"transaction_dt": result.transaction_dt})
+            rows_insert_for_control_table.append({"transaction_dt": result.transaction_dt, "processed_flag": "false"})
         elif is_history_date(client, result.transaction_dt):
             # update the processed flag to false to again process the history files
             change_control_table(client, result.transaction_dt, 'false')
