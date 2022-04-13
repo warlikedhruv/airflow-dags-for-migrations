@@ -58,24 +58,51 @@ def change_control_table(bq_client, transaction_dt, processed_flag):
     query_job.result()  # Waits for statement to finish
 
 
+def filter_duplicate_hr(feed_list:list)->dict:
+    # same function copy here
+    return {"processed_files": [], "duplicate_file_list": []}
+
 def scan_and_load_file_to_table():
     rows_to_insert = []
     prefix = "manifest/"
     blobs = storage_client.list_blobs(BUCKET_NAME, prefix=prefix)
-    for blob in blobs:
-        file_split = str(blob.name).split("/")
-        file_split = list(filter(None, file_split))
-        if len(file_split) > 1:
-            transaction_dt = datetime.strptime(file_split[1].split("-")[2], "%Y%m%d%H") + timedelta(1)
-            rows_to_insert.append({"filename": file_split[1], "transaction_dt": transaction_dt.strftime("%Y-%m-%d")})
+    blobs_list = [str(blob.name) for blob in blobs]
+    filtered_files = filter_duplicate_hr(blobs_list)
+    for file_path in filtered_files['processed_files']:
+        manifest_name = file_path.split("/", 1)[-1]
+        parsed_date_stamp = datetime.strptime(file_path.split("-")[2], "%Y%m%d%H")
+        transaction_dt = parsed_date_stamp.date()
+        transaction_hr = parsed_date_stamp.hour
+        duplicate_file_check = "N"
+        rows_to_insert.append({"manifest_name": manifest_name, "transaction_dt": transaction_dt,
+                               "transaction_hr": transaction_hr,"duplicate_file_check": duplicate_file_check,
+                               "load_ts": load_ts})
+
+    for file_path in filtered_files['duplicate_file_list']:
+        manifest_name = file_path.split("/", 1)[-1]
+        parsed_date_stamp = datetime.strptime(file_path.split("-")[2], "%Y%m%d%H")
+        transaction_dt = parsed_date_stamp.date()
+        transaction_hr = parsed_date_stamp.hour
+        duplicate_file_check = "N"
+        rows_to_insert.append({"manifest_name": manifest_name, "transaction_dt": transaction_dt,
+                               "transaction_hr": transaction_hr,"duplicate_file_check": duplicate_file_check,
+                               "load_ts": load_ts})
+
     return rows_to_insert
 
+def truncate_bq_table(bq_client, tablename):
+    query_str = f"TRUNCATE TABLE {tablename}"
+    query_job = bq_client.query(query_str)
+    result = query_job.result()
+    return result
 
 def load_manifest_stagging_table():
     from google.cloud import bigquery
 
     # Construct a BigQuery client object.
     client = bigquery.Client()
+
+    truncate_bq_table(client, "mineral-order-337219.test_dags.log_manifest_stg")
 
     rows = scan_and_load_file_to_table()
     insert_row_into_table(client, "mineral-order-337219.test_dags.log_manifest_stg", rows)
