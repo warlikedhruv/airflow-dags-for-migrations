@@ -62,7 +62,7 @@ def filter_duplicate_hours(feed_path):
                 else:
                     duplicate_file_list.append(filepath)
             else:
-                filter_hours_dict[file_split[2]] = file_split
+                filter_hours_dict[key] = file_split
         except Exception as e:
             print("Exception:,", e)
 

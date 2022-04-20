@@ -58,9 +58,33 @@ def change_control_table(bq_client, transaction_dt, processed_flag):
     query_job.result()  # Waits for statement to finish
 
 
-def filter_duplicate_hr(feed_list:list)->dict:
-    # same function copy here
-    return {"processed_files": [], "duplicate_file_list": []}
+def filter_duplicate_hours(feed_path)->dict:
+    filter_hours_dict = {}
+    duplicate_file_list = []
+
+    for filepath in feed_path:
+        try:
+            file_split = filepath.split("-")
+            key = file_split[0] + file_split[2]
+            if key in filter_hours_dict:
+                time_stamp_previous_file = int(filter_hours_dict[key][3].split(".")[0])
+                time_stamp_current_file = int(file_split[3].split(".")[0])
+
+                if time_stamp_previous_file < time_stamp_current_file:
+                    duplicate_file_list.append("-".join(filter_hours_dict[key]))
+                    filter_hours_dict[key] = file_split
+                else:
+                    duplicate_file_list.append(filepath)
+            else:
+                filter_hours_dict[key] = file_split
+        except Exception as e:
+            print("Exception:,", e)
+
+    processed_files = []
+
+    for key in filter_hours_dict.keys():
+        processed_files.append("-".join(filter_hours_dict[key]))
+    return {"processed_files": processed_files, "duplicate_file_list": duplicate_file_list}
 
 def scan_and_load_file_to_table():
     rows_to_insert = []
@@ -102,7 +126,7 @@ def load_manifest_stagging_table():
     # Construct a BigQuery client object.
     client = bigquery.Client()
 
-    truncate_bq_table(client, "mineral-order-337219.test_dags.log_manifest_stg")
+    #truncate_bq_table(client, "mineral-order-337219.test_dags.log_manifest_stg")
 
     rows = scan_and_load_file_to_table()
     insert_row_into_table(client, "mineral-order-337219.test_dags.log_manifest_stg", rows)
