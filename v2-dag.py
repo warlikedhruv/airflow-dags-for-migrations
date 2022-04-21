@@ -128,6 +128,73 @@ def load_control_table():
     run_query(client, insert_query)
 
 
+"""
+TASK -3 
+"""
+def move_file(bucket_name: str, destination_bucket_name: str, source_files: list, destination_files: list):
+    """Moves a blob from one bucket to another with a new name."""
+
+    source_bucket = storage_client.bucket(bucket_name)
+    destination_bucket = storage_client.bucket(destination_bucket_name)
+    for source_path, destination_path in zip(source_files, destination_files):
+        source_blob = source_bucket.blob(source_path)
+
+        blob_copy = source_bucket.copy_blob(
+            source_blob, destination_bucket, destination_path
+        )
+        # source_bucket.delete_blob(source_path)
+
+        print(
+            "Blob {} in bucket {} moved to blob {} in bucket {}.".format(
+                source_blob.name,
+                source_bucket.name,
+                blob_copy.name,
+                destination_bucket.name,
+            )
+        )
+
+def fetch_feed_file_from_archive(common_prefix: str):
+    # find directories with date eg : feeds/standard-feed/20220202/*
+    blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=common_prefix, delimiter="/")
+    file_path = [str(blob.name) for blob in blobs]
+
+    # move files back to ingress bucket
+    move_file(ARCHIVAL_BUCKET, BUCKET_NAME, source_files=file_path, destination_files=file_path)
+
+    return True
+
+
+def find_manifest_files_from_archive(history_date)->list:
+    import re
+    prefix = "manifest/"
+    blobs = storage_client.list_blobs(ARCHIVAL_BUCKET, prefix=prefix)
+    feeds = []
+
+    kv_feed_regex = prefix + "auction_kv_labels_feed-11303-" + history_date.strftime("%Y%m%d") + "\w+"
+    standard_feed_regex = prefix + "standard_feed_feed-11303-" + history_date.strftime("%Y%m%d") + "\w+"
+
+    for blob in blobs:
+        if re.match(kv_feed_regex, blob.name):
+            feeds.append(blob.name)
+        elif re.match(standard_feed_regex, blob.name):
+            feeds.append(blob.name)
+
+    return feeds
+
+def restore_history_file(history_date):
+    # restore manifest files
+    manifest_feeds = find_manifest_files_from_archive(history_date)
+    move_file(ARCHIVAL_BUCKET, BUCKET_NAME, source_files=manifest_feeds, destination_files=manifest_feeds)
+
+    # restore kv feeds
+    kv_feed_common_path = "feeds/kv_feed/{date}/".format(date=history_date.strftime("%Y%m%d"))
+    fetch_feed_file_from_archive(kv_feed_common_path)
+
+    # restore standard feeds
+    kv_feed_common_path = "feeds/standard_feed/{date}/".format(date=yesterday_dt.strftime("%Y%m%d"))
+    fetch_feed_file_from_archive(kv_feed_common_path)
+
+
 
 start = DummyOperator(
     task_id="start",
