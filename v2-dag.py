@@ -4,8 +4,8 @@
 EMAIL
 """
 
-def send_email():
-    body = """<b> failure </b></br>"""
+def send_email(missing_file_count):
+    body = """<b> failure the missing files count are :  %s</b></br>""" %(str(missing_file_count))
     body += """<b> Actions:</b>"""
     body += """ <ul>
                     <li>Run this list`:
