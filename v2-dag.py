@@ -4,8 +4,9 @@
 EMAIL
 """
 
-def send_email(missing_file_count):
-    body = """<b> failure the missing files count are :  %s</b></br>""" %(str(missing_file_count))
+def send_email(transaction_dt , missing_file_count):
+    body = """<b> failure in the transaction data: %s 
+                || the missing files count are :  %s</b></br>""" %(str(transaction_dt), str(missing_file_count))
     body += """<b> Actions:</b>"""
     body += """ <ul>
                     <li>Run this list`:
