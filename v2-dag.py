@@ -8,13 +8,13 @@ def send_email():
     body = """<b> failure </b></br>"""
     body += """<b> Actions:</b>"""
     body += """ <ul>
-                <li>Run this list`:
-                <ul>
-                <li>SELECT * from table</li>
-                <li> NOTE: this table is cleared</li>
-                </ul>
-                </li>
-                <li>CRATE Xandr ticket</li>
+                    <li>Run this list`:
+                        <ul>
+                            <li>SELECT * from table</li>
+                            <li> NOTE: this table is cleared</li>
+                        </ul>
+                    </li>
+                    <li>CRATE Xandr ticket</li>
                 </ul>
     
     """
