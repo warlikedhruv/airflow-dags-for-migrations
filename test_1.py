@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 
 
 start_date = datetime(2022, 2, 25)
