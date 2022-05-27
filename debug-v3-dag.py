@@ -27,7 +27,16 @@ def load_file_to_bq():
     destination_table = client.get_table(table_id)  # Make an API request.
     print("Loaded {} rows.".format(destination_table.num_rows))
 
+def create_view():
+    client = bigquery.Client() # use impsersonation client
 
+    view_id = "my-project.my_dataset.my_view"
+    source_id = "my-project.my_dataset.my_table"
+    view = bigquery.Table(view_id)
+    view.view_query = f"SELECT name, post_abbr FROM `{source_id}` WHERE name LIKE 'W%'"
+
+    view = client.create_table(view)
+    print(f"Created {view.table_type}: {str(view.reference)}")
 
 task1 = PythonOperator(
     task_id='load_file_to_bq',
