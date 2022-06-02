@@ -27,7 +27,6 @@ def load_file_to_bq():
     destination_table = client.get_table(table_id)  # Make an API request.
     print("Loaded {} rows.".format(destination_table.num_rows))
 
-def deleteExistingView(view):
 
 
 def create_view():
