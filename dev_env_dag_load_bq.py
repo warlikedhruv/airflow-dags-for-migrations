@@ -494,11 +494,7 @@ dag = DAG("hook_gcp_bucket_final_dev", default_args=default_args, schedule_inter
 # scan_bucket_t1_1 >> duplicate_hour_check_t2_1
 # duplicate_hour_check_t2_1 >> [load_manifest_table_t3_1, archive_duplicate_files_t4_1]
 
-archive_duplicate_files_t4_1 = PythonOperator(
-    task_id='test_1_push',
-    python_callable=test_1_push,
-    provide_context=True,
-    dag=dag)
+
 
 archive_duplicate_files_t5_1 = PythonOperator(
     task_id='test_2_pull',
