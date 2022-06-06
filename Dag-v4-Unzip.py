@@ -69,7 +69,7 @@ def helper_scan_bucket(prefix, regex):
     blobs = storage_client.list_blobs(prefix)
     for blob in blobs:
         if re.match(regex, blob.name):
-            pass
+            return str(blob.name) # return first file occured.  # new update
     return None
 
 
@@ -81,6 +81,28 @@ def find_master_file():
         return 'SendEmailTask'
     return "DummyForward"
 
+
+def copy_zip_to_staging():
+    prefix  = "" # same in the prefix of find master file
+    regex = ""
+    blob_path = helper_scan_bucket(prefix, regex)
+    copy_file(blob_path) # same copy function in previous files
+    return blob_path
+
+
+def unzip_file_in_staging():
+    bucket = "" # staging bucket name
+    zipfilename_with_path = "" # for now put static file path to test
+    destination_blob_pathname = "" # same as zipfilename path
+    blob = bucket.blob(destination_blob_pathname)
+    zipbytes = io.BytesIO(blob.download_as_string())
+
+    if is_zipfile(zipbytes):
+        with ZipFile(zipbytes, 'r') as myzip:
+            for contentfilename in myzip.namelist():
+                contentfile = myzip.read(contentfilename)
+                blob = bucket.blob(zipfilename_with_path + "/" + contentfilename)
+                blob.upload_from_string(contentfile)  # upload to same bucket
 
 
 start = DummyOperator(
