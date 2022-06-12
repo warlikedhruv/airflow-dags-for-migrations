@@ -67,9 +67,11 @@ def zipextract():
 def helper_scan_bucket(prefix, regex):
 
     blobs = storage_client.list_blobs(prefix)
+    regex_done = regex + ".done.zip"
+    zip_file = set()
     for blob in blobs:
-        if re.match(regex, blob.name):
-            return str(blob.name) # return first file occured.  # new update
+        file_done_split = str(blob.name).split(".")
+        if "done" in file_done_split
     return None
 
 
@@ -105,6 +107,70 @@ def unzip_file_in_staging():
                 blob.upload_from_string(contentfile)  # upload to same bucket
 
 
+
+"""DYNAMIC DAG START"""
+from airflow import configuration as conf
+from airflow.models import DagBag, TaskInstance
+from airflow import  settings
+import logging
+def get_count_inner_files():
+    if query.size() > 1:
+        return query.size()
+    else:
+        return 0
+
+def resetTasksStatus(task_id, execution_date):
+    logging.info("Resetting: " + task_id + " " + execution_date)
+
+
+    dag_folder = conf.get('core', 'DAGS_FOLDER')
+    dagbag = DagBag(dag_folder)
+    check_dag = dagbag.dags[main_dag_id]
+    session = settings.Session()
+
+
+    my_task = check_dag.get_task(task_id)
+    ti = TaskInstance(my_task, execution_date)
+    state = ti.current_state()
+    logging.info("Current state of " + task_id + " is " + str(state))
+    ti.set_state(None, session)
+    state = ti.current_state()
+    logging.info("Updated state of " + task_id + " is " + str(state))
+
+
+
+def bridge1(*args, **kwargs):
+
+
+    # You can set this value dynamically e.g., from a database or a calculation
+    dynamicValue = get_count_inner_files()
+
+    # Below code prevents this bug: https://issues.apache.org/jira/browse/AIRFLOW-1460
+    for i in range(dynamicValue):
+        resetTasksStatus('extractInnerFile_' + str(i), str(kwargs['execution_date']))
+
+
+DynamicWorkflow_Group1 = get_count_inner_files()
+bridge1_task = PythonOperator(
+    task_id='bridge1',
+    dag=dag,
+    provide_context=True,
+    python_callable=bridge1,
+    op_args=[])
+
+
+for index in range(int(DynamicWorkflow_Group1)):
+    dynamicTask = PythonOperator(
+        task_id='firstGroup_' + str(index),
+        dag=dag,
+        provide_context=True,
+        python_callable=doSomeWork,
+        op_args=['firstGroup', index])
+
+
+    starting_task.set_downstream(dynamicTask)
+    dynamicTask.set_downstream(bridge1_task)
+"""DYNAMIC DAG END"""
 start = DummyOperator(
     task_id="start",
     trigger_rule="all_success",
