@@ -1,6 +1,24 @@
 import re
 from io import StringIO
 import csv
+
+
+def validate_file():
+    .......
+    email_body = make_email_body(error[:header_row_error_len], error[header_row_error_len:])
+    send_email() # same as before
+
+
+def make_email_body(header_row_error, data_row_error):
+    body = """ """
+    for error in header_row_error:
+        body += """%s <br />""" % (error)
+    body += """<br /><br /> """
+
+    for error in data_row_error:
+        body += """%s <br /> """ % (error)
+    return error
+
 def isFileCSV(filename):
     extension = filename.split(".")[-1]
     if extension.lower() == "csv":
@@ -76,8 +94,3 @@ def download_blob_into_memory(bucket_name, blob_name):
     blob = StringIO(blob)
     file_contents = csv.reader(blob, delimiter=',')
 
-    print(
-        "Downloaded storage object {} from bucket {} as the following string: {}.".format(
-            blob_name, bucket_name, contents
-        )
-    )
