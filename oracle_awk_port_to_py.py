@@ -4,7 +4,6 @@ import csv
 
 
 def validate_file():
-    .......
     email_body = make_email_body(error[:header_row_error_len], error[header_row_error_len:])
     send_email() # same as before
 
@@ -92,5 +91,15 @@ def download_blob_into_memory(bucket_name, blob_name):
     blob = blob.download_as_string()
     blob = blob.decode('utf-8')
     blob = StringIO(blob)
+
     file_contents = csv.reader(blob, delimiter=',')
+
+
+from airflow.operators.bash_operator import BashOperator
+BashOperator(
+        task_id='increment_counter_'+ str(index),
+        dag=dag,
+        bash_command="{{ ti.xcom_pull('bridge_1') | int + 1 }}",
+        xcom_push=True,
+    )
 
