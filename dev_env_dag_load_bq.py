@@ -532,26 +532,31 @@ new load function
 """
 
 def add_columns(counter, row:list, column_name):
-    data = {}
     row.append(",".join(row))
     row.insert(0, counter)
-    for i in range(0, len(row)):
-        data[column_name[i]] = row[i]
-    return data
+    row = ""
+
+        # data[column_name[i]] = row[i]
+    row = f"({row[0]}, {row[1]}, {row[2]},{row[3]},{row[4]},{row[5]}, {row[6]}, {row[7]})"
+
+    return row
 
 def load_csv():
     ..... # same code as prev.
     final_data = []
     column_names = file_contents.pop(0)
     counter = 1
+    sql_statement = "INSERT INTO TABLE xyz VALUES "
     for row in file_contents:
         final_data.append(add_columns(row, column_names))
-
-    errors = client.insert_rows_json(table_id, final_data)  # Make an API request.
-    if errors == []:
-        print("New rows have been added.")
-    else:
-        print("Encountered errors while inserting rows: {}".format(errors))
+    sql_statement += ",".join(final_data)
+    query_job = bq_client.query(sql_statement)
+    result = query_job.result()
+    # errors = client.insert_rows_json(table_id, final_data)  # Make an API request.
+    # if errors == []:
+    #     print("New rows have been added.")
+    # else:
+    #     print("Encountered errors while inserting rows: {}".format(errors))
 
 
 
