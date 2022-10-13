@@ -1,32 +1,15 @@
-from datetime import datetime, timedelta, timezone
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+def send_mail(query_results)-> csv.writer:
+    from pathlib import Path
+    Path("/home/airflow/gcs/data/").mkdir(parents=True, exist_ok=True) #create dir if doesnt exists
+    
+    
+    with open('/home/airflow/gcs/data/email_attach.csv') as f:
+        writer = csv.writer(f, delimiter=';')
+        column_names = ["col1", "col_2", "col_3", "col_4", "col_5"]
+        writer.writerow(column_names)
+        for result in query_results:
+            writer.writerow(["col1", "col_2", "col_3", "col_4", "col_5"])
 
+    send_email(sender, to, """html""", ['/home/airflow/gcs/data/email_attach.csv'])
 
-start_date = datetime(2022, 2, 25)
-default_args = {
-    "owner": "xyz",
-    "depends_on_past": False,
-    "start_date": start_date,
-    "email": ["airflow@airflow.com"],
-    "email_on_failure": False,
-    "email_on_retry": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=2),
-}
-
-
-dag = DAG('test_2_simple',
-          schedule_interval= None,
-          default_args=default_args,
-          catchup=False
-          )
-
-def my_processing_func(**kwargs):
-    print("I have sensed the task is complete in a dag")
-
-
-some_task = PythonOperator(
-    task_id='task_1',
-    python_callable=my_processing_func,
-    dag=dag)
+    os.remove('/home/airflow/gcs/data/email_attach.csv')
