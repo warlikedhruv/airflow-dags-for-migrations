@@ -13,3 +13,21 @@ def send_mail(query_results)-> csv.writer:
     send_email(sender, to, """html""", ['/home/airflow/gcs/data/email_attach.csv'])
 
     os.remove('/home/airflow/gcs/data/email_attach.csv')
+
+def get_column_names(..):
+    ..
+
+def prepare_mail_with_atachment(project_name, dataset_name, table_name):
+    query = "SELECT * from {project_name}.{dataset_name}.{table_name}".format(project_name=project_name, dataset_name=dataset_name, table_name=table_name)
+    query_job = bq_client.query(query)
+    results = query_job.result()
+
+    data = []
+    columns = get_column_names(..)
+    data.append(columns)
+
+    for result in results:
+        data.append([result[str(col)] for col in columns])
+
+    html = """ check the table """
+    send_mail_with_attachment(..)
