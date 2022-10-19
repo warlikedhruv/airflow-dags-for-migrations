@@ -1,4 +1,36 @@
 from google.cloud import spanner
+import requests
+import json
+import io
+from google.cloud import storage
+class ApiGcsHandler:
+    file_urls = []
+    def __init__(self, api_url_1):
+        self.api_url_1 = api_url_1
+    
+    def hit_api(self, url, header=None, payload=None):
+        x = requests.post(url, header=header, payload=payload)
+        return json.dumps(x.json)
+
+    def get_file_urls(self, url):
+        response = self.hit_api(url)
+        return response.files
+
+    def upload_file_to_gcs(self, bucket_name, file_data, file_name):
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+        blob.upload_from_string(file_data)
+
+
+    def get_files(self):
+        self.file_urls = get_file_urls(self.api_url_1)
+        for url in self.file_urls:
+            response = self.hit_api(url)
+            self.upload_file_to_gcs("bucket_name", response.data, "name:"+str(url))
+
+            
+
 
 def download_data_from_gcs():
     import csv
