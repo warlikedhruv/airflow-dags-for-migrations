@@ -118,3 +118,61 @@ def insert_data(instance_id, database_id, table_id, batchsize, data, format_file
 
 data = download_data_from_gcs()
 insert_data(...,data..,)
+
+
+
+import flask
+from flask_cors import cross_origin
+from DATA_VALIDATION import validate
+from DAO import mongo_utils as spark_mongo
+from CONFIG.db_table_config import MongoDBTableConfig
+import logging
+import functions_framework
+
+
+def send_response(status_code: int, message: str):
+    return flask.jsonify({"status_code": status_code, message: message})
+
+
+def get_data(data):
+    data = data.get_json()
+    if data and 'data' in data:
+        return data
+    raise ValueError('No data found in request')
+
+
+def validate_data(data):
+    return data
+
+
+def filter_data(data):
+    return data
+
+
+def load_data(data) -> None:
+    db = spark_mongo.MongoDB(MongoDBTableConfig())
+    try:
+        db.insert_data(data)
+    except Exception as e:
+        logging.critical("EXCEPTION IN INSERT", str(e))
+        raise ValueError("EXCEPTION WHILE INSERTION IN DB", str(e))
+    return None
+
+
+data_pipeline = [get_data, validate_data, filter_data, load_data]
+
+
+@cross_origin()
+# @functions_framework.http
+def xlab_data_fabric(request):
+    data = request
+    for step in data_pipeline:
+        try:
+            data = step(data)
+        except ValueError as e:
+            return send_response(403, str(e))
+        except Exception as e:
+            return send_response(401, str(e))
+    return send_response(200, str("DATA LOADED TO DB"))
+
+
