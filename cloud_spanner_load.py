@@ -282,7 +282,21 @@ class GCS_Operators:
             self.upload_file_to_gcs(str(GCS_Buckets.TEST_SPANNER_BUCKET), response.data, "name:" + str(url))
             logging.info("UPLOADED FILE TO ", str(GCS_Buckets.TEST_SPANNER_BUCKET), " FILE NAME ", "name:", str(url))
 
+def upload_to_cloud_spanner():
+	from google.cloud.spanner import KeySet
+	from google.cloud import spanner
+	client = spanner.Client()
+	instance = client.instance(INSTANCE_NAME)
+	database = instance.database(DATABASE_NAME)
 
+	with database.batch() as batch:
+
+	    batch.insert(
+		'citizens', columns=['email', 'first_name', 'last_name', 'age'],
+		values=[
+		    ['phred@exammple.com', 'Phred', 'Phlyntstone', 32],
+		    ['bharney@example.com', 'Bharney', 'Rhubble', 31],
+		])
 import flask
 from flask_cors import cross_origin
 @cross_origin()
