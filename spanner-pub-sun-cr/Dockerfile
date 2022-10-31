@@ -10,7 +10,7 @@ ENV APP_HOME /app
 ENV PORT 8080
 WORKDIR $APP_HOME
 COPY . ./
-
+EXPOSE 8080
 # Install production dependencies.
 RUN pip install --no-cache-dir -r requirements.txt
 

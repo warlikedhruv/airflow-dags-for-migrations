@@ -6,7 +6,7 @@ from enum import Enum
 import logging
 from google.cloud.spanner import KeySet
 from google.cloud import spanner
-
+import uuid
 
 class ApiGcsHandler:
     file_urls = []
@@ -95,8 +95,8 @@ def upload_to_cloud_spanner(INSTANCE_NAME, DATABASE_NAME):
 
     with database.batch() as batch:
         batch.insert(
-            'citizens', columns=['email', 'first_name', 'last_name', 'age'],
+            'citizens', columns=['email', 'first_name', 'last_name', 'age', 'uuid'],
             values=[
-                ['phred@exammple.com', 'Phred', 'Phlyntstone', 32],
-                ['bharney@example.com', 'Bharney', 'Rhubble', 31],
+                ['phred@exammple.com', 'Phred', 'Phlyntstone', 32, uuid.uuid4().hex],
+                ['bharney@example.com', 'Bharney', 'Rhubble', 31, uuid.uuid4().hex],
             ])
