@@ -3,8 +3,18 @@ from flask import Flask, request
 from utils import read_pub_sub_msg as queue_ops
 from utils import  gcp_api_utils as spanner_ops
 from utils import  push_pub_sub_msg as push_msg
+from utils import download_and_push_gcs
 app = Flask(__name__)
 
+@app.route("/upload", methods=["POST"])
+def push_file():
+    project_id = ""
+    bucket_name = ""
+    headers = {"Authorization": "dXNlcg=="}
+    api_url = "https://reqres.in/api/users"
+    bucket_client = download_and_push_gcs.initialize_gcs_bucket_client(project_id, bucket_name)
+    data = download_and_push_gcs.download_file_as_string(bucket_client, "file3.txt")
+    download_and_push_gcs.upload_string_as_file(api_url, headers, data)
 
 @app.route("/", methods=["POST"])
 def process_response():
